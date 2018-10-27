@@ -1,0 +1,22 @@
+## Output files
+dist/
+persistence/
+
+## IDEs
+.idea/
+
+## Package managers
+node_modules/
+
+## Temporary files
+npm-debug.log
+npm-debug.log*
+yarn-error.log
+/.sass-cache
+
+# Serverless
+.serverless
+.webpack
+
+# Config
+.secret.yml
