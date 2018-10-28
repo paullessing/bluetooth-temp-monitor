@@ -1,21 +1,13 @@
 import { Characteristic, Peripheral, Service } from 'noble';
 import { ify, timeout } from './util';
 import { Observable, ReplaySubject, Subject } from 'rxjs';
+import { Temperatures } from './temperatures.model';
 
 const SERVICE_UUID = 'fff0';
 const STATUS_CHARACTERISTIC_UUID = 'fff1';
 const PAIR_CHARACTERISTIC_UUID = 'fff2';
 const DATA_CHARACTERISTIC_UUID = 'fff4';
 const CONTROL_CHARACTERISTIC_UUID = 'fff5';
-
-export type Temperatures = [
-  number | null,
-  number | null,
-  number | null,
-  number | null,
-  number | null,
-  number | null
-];
 
 const AUTOPAIR_COMMAND = new Uint8Array([33, 7, 6, 5, 4, 3, 2, 1, -72, 34, 0, 0, 0, 0, 0]);
 const SEND_TEMPERATURES_CONTROL = new Uint8Array([11, 1, 0, 0, 0, 0]);

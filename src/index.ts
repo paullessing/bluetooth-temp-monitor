@@ -1,6 +1,8 @@
-import noble, { Peripheral, Service } from 'noble';
-import { BluetoothThermometer, Temperatures } from './bluetooth-thermometer';
+import noble, { Peripheral } from 'noble';
+import { BluetoothThermometer } from './bluetooth-thermometer';
 import { timeout } from './util';
+import { ApiClient } from './api-client';
+import { throttleTime } from 'rxjs/operators';
 
 export const SENSOR_MAC_ADDRESS = '0c:ae:7d:e7:67:b1';
 
@@ -32,8 +34,28 @@ async function run(): Promise<void> {
   console.log('Asking for data...');
   await thermometer.startListening();
 
-  thermometer.temperatures$.subscribe((temps) => {
-    console.log(temps);
+  thermometer.temperatures$.pipe(throttleTime(5000)).subscribe((temps) => {
+    // TODO extract to class
+    const [ambient1, ambient2, internal1, internal2, internal3, internal4] = temps;
+
+    if (ambient1 !== null) {
+      ApiClient.updateSensor('bbq_temp_ambient1', ambient1)
+    }
+    if (ambient2 !== null) {
+      ApiClient.updateSensor('bbq_temp_ambient2', ambient2)
+    }
+    if (internal1 !== null) {
+      ApiClient.updateSensor('bbq_temp_internal1', internal1)
+    }
+    if (internal2 !== null) {
+      ApiClient.updateSensor('bbq_temp_internal2', internal2)
+    }
+    if (internal3 !== null) {
+      ApiClient.updateSensor('bbq_temp_internal3', internal3)
+    }
+    if (internal4 !== null) {
+      ApiClient.updateSensor('bbq_temp_internal4', internal4)
+    }
   });
 
   // console.log('Done.');
