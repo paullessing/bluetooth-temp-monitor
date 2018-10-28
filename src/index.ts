@@ -39,22 +39,22 @@ async function run(): Promise<void> {
     const [ambient1, ambient2, internal1, internal2, internal3, internal4] = temps;
 
     if (ambient1 !== null) {
-      ApiClient.updateSensor('bbq_temp_ambient1', ambient1)
+      ApiClient.updateSensor('bbq_temp_ambient1', 'BBQ Temp Ambient 1', ambient1);
     }
     if (ambient2 !== null) {
-      ApiClient.updateSensor('bbq_temp_ambient2', ambient2)
+      ApiClient.updateSensor('bbq_temp_ambient2', 'BBQ Temp Ambient 2', ambient2);
     }
     if (internal1 !== null) {
-      ApiClient.updateSensor('bbq_temp_internal1', internal1)
+      ApiClient.updateSensor('bbq_temp_internal1', 'BBQ Temp Internal 1', internal1);
     }
     if (internal2 !== null) {
-      ApiClient.updateSensor('bbq_temp_internal2', internal2)
+      ApiClient.updateSensor('bbq_temp_internal2', 'BBQ Temp Internal 2', internal2);
     }
     if (internal3 !== null) {
-      ApiClient.updateSensor('bbq_temp_internal3', internal3)
+      ApiClient.updateSensor('bbq_temp_internal3', 'BBQ Temp Internal 3', internal3);
     }
     if (internal4 !== null) {
-      ApiClient.updateSensor('bbq_temp_internal4', internal4)
+      ApiClient.updateSensor('bbq_temp_internal4', 'BBQ Temp Internal 4', internal4);
     }
   });
 
