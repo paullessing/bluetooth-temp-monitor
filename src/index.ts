@@ -34,7 +34,17 @@ async function run(): Promise<void> {
   console.log('Asking for data...');
   await thermometer.startListening();
 
+  let dataCount: number;
+
   thermometer.temperatures$.pipe(throttleTime(5000)).subscribe((temps) => {
+    if (dataCount % 1000 === 0) {
+      if (dataCount === 0) {
+        console.log('Started getting data');
+      }
+      process.stdout.write(dataCount % 10000 === 0 ? ',' : '.');
+    }
+    dataCount++;
+
     // TODO extract to class
     const [ambient1, ambient2, internal1, internal2, internal3, internal4] = temps;
 
