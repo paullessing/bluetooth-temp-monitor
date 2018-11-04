@@ -6,18 +6,39 @@ import { throttleTime } from 'rxjs/operators';
 
 export const SENSOR_MAC_ADDRESS = '0c:ae:7d:e7:67:b1';
 
-(async () => {
-  try {
-    run();
-  } catch (e) {
-    console.log('ERROR: ' + e.message);
-    process.exit(1);
+class DeviceNotFoundError extends Error {
+  constructor(message?: string) {
+    super(`Device not found${message ? ': ' + message : ''}`);
   }
-})();
+}
+
+function delay(seconds: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, seconds * 1000);
+  });
+}
+
+(async () => {
+  while (true) {
+    try {
+      await run();
+    } catch (e) {
+      if (e instanceof DeviceNotFoundError) {
+        console.log('Device not found, retrying in 60s');
+        await delay(5);
+      } else {
+        throw e;
+      }
+    }
+  }
+})().catch((e) => {
+  console.log('ERROR: ' + e.message);
+  process.exit(1);
+});
 
 async function run(): Promise<void> {
   process.stdout.write('Waiting for adapter...');
-  await timeout(waitForAdapter(), 20_000);
+  await timeout(waitForAdapter(), 20_000, DeviceNotFoundError);
   process.stdout.write(' OK\n');
 
   process.stdout.write('Finding thermometer...');
@@ -48,24 +69,12 @@ async function run(): Promise<void> {
     // TODO extract to class
     const [ambient1, ambient2, internal1, internal2, internal3, internal4] = temps;
 
-    if (ambient1 !== null) {
-      ApiClient.updateSensor('bbq_temp_ambient1', 'BBQ Temp Ambient 1', ambient1);
-    }
-    if (ambient2 !== null) {
-      ApiClient.updateSensor('bbq_temp_ambient2', 'BBQ Temp Ambient 2', ambient2);
-    }
-    if (internal1 !== null) {
-      ApiClient.updateSensor('bbq_temp_internal1', 'BBQ Temp Internal 1', internal1);
-    }
-    if (internal2 !== null) {
-      ApiClient.updateSensor('bbq_temp_internal2', 'BBQ Temp Internal 2', internal2);
-    }
-    if (internal3 !== null) {
-      ApiClient.updateSensor('bbq_temp_internal3', 'BBQ Temp Internal 3', internal3);
-    }
-    if (internal4 !== null) {
-      ApiClient.updateSensor('bbq_temp_internal4', 'BBQ Temp Internal 4', internal4);
-    }
+    ApiClient.updateSensor('bbq_temp_ambient1', 'BBQ Temp Ambient 1', ambient1);
+    ApiClient.updateSensor('bbq_temp_ambient2', 'BBQ Temp Ambient 2', ambient2);
+    ApiClient.updateSensor('bbq_temp_internal1', 'BBQ Temp Internal 1', internal1);
+    ApiClient.updateSensor('bbq_temp_internal2', 'BBQ Temp Internal 2', internal2);
+    ApiClient.updateSensor('bbq_temp_internal3', 'BBQ Temp Internal 3', internal3);
+    ApiClient.updateSensor('bbq_temp_internal4', 'BBQ Temp Internal 4', internal4);
   });
 
   // console.log('Done.');
