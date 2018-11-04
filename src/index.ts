@@ -1,16 +1,13 @@
 import noble, { Peripheral } from 'noble';
 import { BluetoothThermometer } from './bluetooth-thermometer';
-import { timeout } from './util';
 import { ApiClient } from './api-client';
 import { throttleTime } from 'rxjs/operators';
+import { DeviceNotFoundError } from './device-not-found-error';
 
 export const SENSOR_MAC_ADDRESS = '0c:ae:7d:e7:67:b1';
-
-class DeviceNotFoundError extends Error {
-  constructor(message?: string) {
-    super(`Device not found${message ? ': ' + message : ''}`);
-  }
-}
+export const ADAPTER_WAIT_TIMEOUT_SECONDS = 2; // 20
+export const PERIPHERAL_WAIT_TIMEOUT_SECONDS = 2; // 20
+export const RETRY_DELAY_SECONDS = 5; // 60
 
 function delay(seconds: number): Promise<void> {
   return new Promise((resolve) => {
@@ -24,8 +21,10 @@ function delay(seconds: number): Promise<void> {
       await run();
     } catch (e) {
       if (e instanceof DeviceNotFoundError) {
-        console.log('Device not found, retrying in 60s');
-        await delay(5);
+        process.stdout.write('\n');
+        console.log(e.message);
+        console.log(`Retrying in ${RETRY_DELAY_SECONDS}s`);
+        await delay(RETRY_DELAY_SECONDS);
       } else {
         throw e;
       }
@@ -38,11 +37,11 @@ function delay(seconds: number): Promise<void> {
 
 async function run(): Promise<void> {
   process.stdout.write('Waiting for adapter...');
-  await timeout(waitForAdapter(), 20_000, DeviceNotFoundError);
+  await waitForAdapter();
   process.stdout.write(' OK\n');
 
   process.stdout.write('Finding thermometer...');
-  const peripheral = await timeout(findPeripheral(), 20_000);
+  const peripheral = await findPeripheral();
   process.stdout.write(' OK\n');
 
   const thermometer = await BluetoothThermometer.create(peripheral);
@@ -55,49 +54,60 @@ async function run(): Promise<void> {
   console.log('Asking for data...');
   await thermometer.startListening();
 
-  let dataCount: number;
+  return new Promise<void>((_, reject) => {
+    let dataCount: number;
 
-  thermometer.temperatures$.pipe(throttleTime(5000)).subscribe((temps) => {
-    if (dataCount % 1000 === 0) {
-      if (dataCount === 0) {
-        console.log('Started getting data');
+    thermometer.temperatures$.pipe(
+      throttleTime(5000),
+    ).subscribe((temps) => {
+      if (dataCount % 12 === 0) {
+        if (dataCount === 0) {
+          console.log('Started getting data');
+        }
+        process.stdout.write(dataCount % 10000 === 0 ? ',' : '.');
       }
-      process.stdout.write(dataCount % 10000 === 0 ? ',' : '.');
-    }
-    dataCount++;
+      dataCount++;
 
-    // TODO extract to class
-    const [ambient1, ambient2, internal1, internal2, internal3, internal4] = temps;
+      // TODO extract to class
+      const [ambient1, ambient2, internal1, internal2, internal3, internal4] = temps;
 
-    ApiClient.updateSensor('bbq_temp_ambient1', 'BBQ Temp Ambient 1', ambient1);
-    ApiClient.updateSensor('bbq_temp_ambient2', 'BBQ Temp Ambient 2', ambient2);
-    ApiClient.updateSensor('bbq_temp_internal1', 'BBQ Temp Internal 1', internal1);
-    ApiClient.updateSensor('bbq_temp_internal2', 'BBQ Temp Internal 2', internal2);
-    ApiClient.updateSensor('bbq_temp_internal3', 'BBQ Temp Internal 3', internal3);
-    ApiClient.updateSensor('bbq_temp_internal4', 'BBQ Temp Internal 4', internal4);
+      ApiClient.updateSensor('bbq_temp_ambient1', 'BBQ Temp Ambient 1', ambient1);
+      ApiClient.updateSensor('bbq_temp_ambient2', 'BBQ Temp Ambient 2', ambient2);
+      ApiClient.updateSensor('bbq_temp_internal1', 'BBQ Temp Internal 1', internal1);
+      ApiClient.updateSensor('bbq_temp_internal2', 'BBQ Temp Internal 2', internal2);
+      ApiClient.updateSensor('bbq_temp_internal3', 'BBQ Temp Internal 3', internal3);
+      ApiClient.updateSensor('bbq_temp_internal4', 'BBQ Temp Internal 4', internal4);
+    }, (e) => {
+      reject(e);
+    });
   });
-
-  // console.log('Done.');
-  // process.exit(0);
 }
 
 function waitForAdapter(): Promise<void> {
-  let isOn = false;
+  let isDone = false;
 
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     if (noble.state === 'poweredOn') {
-      isOn = true;
+      isDone = true;
       resolve();
       return;
     } else {
       const listener = (state: string) => {
-        if (state === 'poweredOn') {
-          isOn = true;
-          noble.removeListener('stateChange', listener)
+        if (state === 'poweredOn' && !isDone) {
+          isDone = true;
+          noble.removeListener('stateChange', listener);
           resolve();
         }
       };
       noble.on('stateChange', listener);
+
+      setTimeout(() => {
+        if (!isDone) {
+          isDone = true;
+          noble.removeListener('stateChange', listener);
+          reject(new DeviceNotFoundError(`Adapter was not on within ${ADAPTER_WAIT_TIMEOUT_SECONDS}s`))
+        }
+      }, ADAPTER_WAIT_TIMEOUT_SECONDS * 1000);
     }
   });
 }
@@ -118,8 +128,8 @@ function findPeripheral(): Promise<Peripheral> {
       if (!done) {
         done = true;
         noble.stopScanning();
-        reject(new Error('Could not find sensor within 60s.'));
+        reject(new DeviceNotFoundError(`Could not find sensor within ${PERIPHERAL_WAIT_TIMEOUT_SECONDS}s`));
       }
-    }, 60_000);
+    }, PERIPHERAL_WAIT_TIMEOUT_SECONDS * 1000);
   });
 }
