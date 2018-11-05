@@ -1,8 +1,11 @@
-import noble, { Peripheral } from 'noble';
+import { Peripheral } from 'noble';
 import { BluetoothThermometer } from './bluetooth-thermometer';
 import { ApiClient } from './api-client';
 import { throttleTime } from 'rxjs/operators';
 import { DeviceNotFoundError } from './device-not-found-error';
+import { readyNoble } from './ready-noble';
+import { Noble } from './noble';
+import { timeout } from './util';
 
 export const SENSOR_MAC_ADDRESS = '0c:ae:7d:e7:67:b1';
 export const ADAPTER_WAIT_TIMEOUT_SECONDS = 2; // 20
@@ -36,12 +39,12 @@ function delay(seconds: number): Promise<void> {
 });
 
 async function run(): Promise<void> {
-  process.stdout.write('Waiting for adapter...');
-  await waitForAdapter();
+  process.stdout.write('Waiting for Bluetooth...');
+  const noble = await waitForAdapter();
   process.stdout.write(' OK\n');
 
   process.stdout.write('Finding thermometer...');
-  const peripheral = await findPeripheral();
+  const peripheral = await findPeripheral(noble);
   process.stdout.write(' OK\n');
 
   const thermometer = await BluetoothThermometer.create(peripheral);
@@ -60,6 +63,7 @@ async function run(): Promise<void> {
     thermometer.temperatures$.pipe(
       throttleTime(5000),
     ).subscribe((temps) => {
+      process.stdout.write('X');
       if (dataCount % 12 === 0) {
         if (dataCount === 0) {
           console.log('Started getting data');
@@ -83,36 +87,11 @@ async function run(): Promise<void> {
   });
 }
 
-function waitForAdapter(): Promise<void> {
-  let isDone = false;
-
-  return new Promise((resolve, reject) => {
-    if (noble.state === 'poweredOn') {
-      isDone = true;
-      resolve();
-      return;
-    } else {
-      const listener = (state: string) => {
-        if (state === 'poweredOn' && !isDone) {
-          isDone = true;
-          noble.removeListener('stateChange', listener);
-          resolve();
-        }
-      };
-      noble.on('stateChange', listener);
-
-      setTimeout(() => {
-        if (!isDone) {
-          isDone = true;
-          noble.removeListener('stateChange', listener);
-          reject(new DeviceNotFoundError(`Adapter was not on within ${ADAPTER_WAIT_TIMEOUT_SECONDS}s`))
-        }
-      }, ADAPTER_WAIT_TIMEOUT_SECONDS * 1000);
-    }
-  });
+function waitForAdapter(): Promise<Noble> {
+  return timeout(readyNoble.waitUntilReady(), ADAPTER_WAIT_TIMEOUT_SECONDS * 1000, DeviceNotFoundError);
 }
 
-function findPeripheral(): Promise<Peripheral> {
+function findPeripheral(noble: Noble): Promise<Peripheral> {
   let done = false;
   return new Promise((resolve, reject) => {
     noble.startScanning();
