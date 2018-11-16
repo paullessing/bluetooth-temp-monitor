@@ -8,9 +8,9 @@ import { Noble } from './noble';
 import { timeout } from './util';
 
 export const SENSOR_MAC_ADDRESS = '0c:ae:7d:e7:67:b1';
-export const ADAPTER_WAIT_TIMEOUT_SECONDS = 2; // 20
-export const PERIPHERAL_WAIT_TIMEOUT_SECONDS = 2; // 20
-export const RETRY_DELAY_SECONDS = 5; // 60
+export const ADAPTER_WAIT_TIMEOUT_SECONDS = 20;
+export const PERIPHERAL_WAIT_TIMEOUT_SECONDS = 20;
+export const RETRY_DELAY_SECONDS = 60;
 
 function delay(seconds: number): Promise<void> {
   return new Promise((resolve) => {
