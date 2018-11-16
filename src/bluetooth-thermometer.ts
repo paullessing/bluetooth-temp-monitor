@@ -2,12 +2,16 @@ import { Characteristic, Peripheral, Service } from 'noble';
 import { ify, timeout } from './util';
 import { Observable, ReplaySubject, Subject } from 'rxjs';
 import { Temperatures } from './temperatures.model';
+import { DeviceNotFoundError } from './device-not-found-error';
+import Timeout = NodeJS.Timeout;
 
 const SERVICE_UUID = 'fff0';
 const STATUS_CHARACTERISTIC_UUID = 'fff1';
 const PAIR_CHARACTERISTIC_UUID = 'fff2';
 const DATA_CHARACTERISTIC_UUID = 'fff4';
 const CONTROL_CHARACTERISTIC_UUID = 'fff5';
+
+const DISCONNECTED_TIMEOUT_SECONDS = 10; // 60
 
 const AUTOPAIR_COMMAND = new Uint8Array([33, 7, 6, 5, 4, 3, 2, 1, -72, 34, 0, 0, 0, 0, 0]);
 const SEND_TEMPERATURES_CONTROL = new Uint8Array([11, 1, 0, 0, 0, 0]);
@@ -21,7 +25,8 @@ export class BluetoothThermometer {
   private _temperature$: Subject<Temperatures>;
 
   constructor(
-    private service: Service,
+    private sensor:     Peripheral,
+    private service:    Service,
     private statusChr:  Characteristic,
     private pairChr:    Characteristic,
     private dataChr:    Characteristic,
@@ -32,11 +37,11 @@ export class BluetoothThermometer {
 
   public static async create(sensor: Peripheral): Promise<BluetoothThermometer> {
     process.stdout.write('Connecting to thermometer...');
-    await timeout(ify(sensor.connect.bind(sensor)), 10_000);
+    await timeout(ify(sensor.connect.bind(sensor)), 10_000, DeviceNotFoundError);
     process.stdout.write(' OK\n');
 
     process.stdout.write('Finding service...');
-    const [service] = await timeout(ify<Service[]>(sensor.discoverServices.bind(sensor), [SERVICE_UUID]), 10_000);
+    const [service] = await timeout(ify<Service[]>(sensor.discoverServices.bind(sensor), [SERVICE_UUID]), 10_000, DeviceNotFoundError);
     process.stdout.write(` OK\n`);
 
     if (!service) {
@@ -70,7 +75,7 @@ export class BluetoothThermometer {
     process.stdout.write(' OK\n');
 
     return new BluetoothThermometer(
-      service, status, pair, data, control
+      sensor, service, status, pair, data, control
     );
   }
 
@@ -78,7 +83,7 @@ export class BluetoothThermometer {
     await ify(this.statusChr.subscribe.bind(this.statusChr));
     return new Promise<void>(async (resolve, reject) => {
       this.statusChr.once('data', (data: Buffer) => {
-        console.log(data);
+        // console.log(data);
         // console.log('Status received', data);
         if (data[0] === 0x21) {
           resolve();
@@ -114,6 +119,37 @@ export class BluetoothThermometer {
     });
     await ify(this.dataChr.subscribe.bind(this.dataChr));
 
-    this.controlChr.write(Buffer.from(new Uint8Array([11, 1, 0, 0, 0, 0])), true, (err) => err ? console.log('err fff5', err.toString()) : null);
+    this.controlChr.write(Buffer.from(SEND_TEMPERATURES_CONTROL), true, (err) => err ? console.log('err fff5', err.toString()) : null);
+    this.ensureConnectionIsAlive();
+  }
+
+  public async stop(): Promise<void> {
+    try {
+      this.statusChr.removeAllListeners();
+      this.pairChr.removeAllListeners();
+      this.dataChr.removeAllListeners();
+      this.controlChr.removeAllListeners();
+      this.service.removeAllListeners();
+      await ify(this.sensor.disconnect.bind(this.sensor));
+      this.sensor.removeAllListeners();
+    } catch (e) {
+      console.warn('Failure while closing connections', e);
+      // Proceed
+    }
+  }
+
+  private ensureConnectionIsAlive(): void {
+    let disconnectedTimeout: Timeout;
+    const restartTimer = () => {
+      disconnectedTimeout && clearTimeout(disconnectedTimeout);
+      disconnectedTimeout = setTimeout(() => {
+        subscription && subscription.unsubscribe();
+        this._temperature$.error(new DeviceNotFoundError(`No message within ${DISCONNECTED_TIMEOUT_SECONDS}s`));
+        this.stop();
+      }, DISCONNECTED_TIMEOUT_SECONDS * 1000);
+    };
+    restartTimer();
+
+    const subscription = this._temperature$.subscribe(() => restartTimer());
   }
 }
