@@ -9,11 +9,12 @@ export class ApiClient {
     await axios.post(`${API_URL}/api/states/sensor.${name}`, {
       state: value,
       attributes: {
-        friendly_name: friendlyName
+        friendly_name: friendlyName,
+        unit_of_measurement: '°C',
       }
     }, {
       headers: {
-        'x-ha-access': API_KEY
+        'Authorization': `Bearer ${API_KEY}`
       }
     });
   }
