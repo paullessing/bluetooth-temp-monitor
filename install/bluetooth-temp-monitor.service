@@ -1,0 +1,10 @@
+[Unit]
+Description=Monitor Bluetooth Temperature
+
+[Service]
+Type=simple
+ExecStart=/home/pi/bluetooth-temp-monitor/run.sh
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
