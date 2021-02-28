@@ -11,7 +11,7 @@ for monitoring and alerting.
 yarn install && yarn build
 
 # Link the service definition to the system folder
-ln -s installation/bluetooth-temp-monitor.service /etc/systemd/system/bluetooth-temp-monitor.service
+ln -s install/bluetooth-temp-monitor.service /etc/systemd/system/bluetooth-temp-monitor.service
 
 # Reload the system list
 sudo sustemctl daemon-reload
