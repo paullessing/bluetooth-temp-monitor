@@ -5,6 +5,24 @@ Uses Bluetooth Low Energy to connect to the thermometer, reads the temperatures,
 then posts them to a [Home Assistant](https://www.home-assistant.io) endpoint
 for monitoring and alerting.
 
+## Installation
+```sh
+# Compile the code
+yarn install && yarn build
+
+# Link the service definition to the system folder
+ln -s installation/bluetooth-temp-monitor.service /etc/systemd/system/bluetooth-temp-monitor.service
+
+# Reload the system list
+sudo sustemctl daemon-reload
+
+# Enable the service
+sudo systemctl start bluetooth-temp-monitor
+
+# Ensure it is running
+sudo systemctl status bluetooth-temp-monitor
+```
+
 ## Background
 The NICEAO meat thermometer is a great thermometer that allows reading from up to 6 probes.
 I use it for monitoring the internal and meat temperatures of my smoker.
