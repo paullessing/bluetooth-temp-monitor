@@ -7,6 +7,9 @@ for monitoring and alerting.
 
 ## Installation
 ```sh
+# Install dependencies (Linux)
+sudo apt-get install bluetooth bluez libbluetooth-dev libudev-dev
+
 # Compile the code
 yarn install && yarn build
 
