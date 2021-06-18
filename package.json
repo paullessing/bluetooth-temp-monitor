@@ -13,6 +13,7 @@
     "@types/node": "^10.12.0",
     "async-mqtt": "^2.6.1",
     "bluetooth-hci-socket": "npm:@abandonware/bluetooth-hci-socket",
+    "dotenv": "^10.0.0",
     "noble": "^1.9.1",
     "rxjs": "^6.3.3"
   },

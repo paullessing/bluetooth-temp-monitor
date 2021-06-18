@@ -19,4 +19,4 @@ yarn-error.log
 .webpack
 
 # Config
-src/config.ts
+.env
