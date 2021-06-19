@@ -21,10 +21,11 @@ sudo ln -s `pwd`/install/bluetooth-temp-monitor.service /etc/systemd/system/blue
 sudo systemctl daemon-reload
 
 # Enable the service
-sudo systemctl start bluetooth-temp-monitor
+sudo systemctl enable bluetooth-temp-monitor.service
+sudo systemctl start bluetooth-temp-monitor.service
 
 # Ensure it is running
-sudo systemctl status bluetooth-temp-monitor
+sudo systemctl status bluetooth-temp-monitor.service
 ```
 
 ## Background
