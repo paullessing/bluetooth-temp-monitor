@@ -5,7 +5,7 @@ export function ify<T>(func: (...args: any[]) => any, ...args: any[]): Promise<T
         reject(err);
       } else {
         if (args.length === 0) {
-          resolve();
+          (resolve as any)();
         } else if (args.length === 1) {
           resolve(args[0]);
         } else {

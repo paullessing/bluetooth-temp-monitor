@@ -3,7 +3,8 @@ Description=Monitor Bluetooth Temperature
 
 [Service]
 Type=simple
-ExecStart=/home/pi/bluetooth-temp-monitor/run.sh
+WorkingDirectory=/opt/bluetooth-temp-monitor
+ExecStart=/opt/bluetooth-temp-monitor/run.sh
 Restart=always
 
 [Install]

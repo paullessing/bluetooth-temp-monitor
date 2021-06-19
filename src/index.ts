@@ -1,21 +1,57 @@
+import dotenv from 'dotenv';
 import { Peripheral } from 'noble';
 import { BluetoothThermometer } from './bluetooth-thermometer';
-import { ApiClient } from './api-client';
-import { throttleTime } from 'rxjs/operators';
 import { DeviceNotFoundError } from './device-not-found-error';
-import { readyNoble } from './ready-noble';
+import { MqttClient, MqttOptions } from './mqtt';
 import { Noble } from './noble';
+import { readyNoble } from './ready-noble';
+import { TemperaturePoller } from './temperature-poller';
 import { timeout } from './util';
 
-export const SENSOR_MAC_ADDRESS = '0c:ae:7d:e7:67:b1';
-export const ADAPTER_WAIT_TIMEOUT_SECONDS = 20;
-export const PERIPHERAL_WAIT_TIMEOUT_SECONDS = 20;
-export const RETRY_DELAY_SECONDS = 60;
+dotenv.config();
+
+export const SENSOR_MAC_ADDRESS = ensureString('SENSOR_MAC_ADDRESS');
+export const ADAPTER_WAIT_TIMEOUT_SECONDS = ensureInt('ADAPTER_WAIT_TIMEOUT_SECONDS');
+export const PERIPHERAL_WAIT_TIMEOUT_SECONDS = ensureInt('PERIPHERAL_WAIT_TIMEOUT_SECONDS');
+export const RETRY_DELAY_SECONDS = ensureInt('RETRY_DELAY_SECONDS');
+
+const mqttOptions: MqttOptions = {
+  host: ensureString('MQTT_HOST'),
+  port: ensureInt('MQTT_PORT'),
+  username: ensureString('MQTT_USERNAME'),
+  password: ensureString('MQTT_PASSWORD'),
+};
 
 function delay(seconds: number): Promise<void> {
   return new Promise((resolve) => {
     setTimeout(resolve, seconds * 1000);
   });
+}
+
+function ensureString(envKey: string): string {
+  if (!process.env.hasOwnProperty(envKey)) {
+    throw new Error(`Environment variable "${envKey}" not found!`);
+  }
+  const envValue: string | undefined = process.env[envKey];
+  if (typeof envValue === 'undefined' || envValue === null) {
+    throw new Error(`Environment variable "${envKey}" was not set!`);
+  }
+  return envValue;
+}
+
+function ensureInt(envKey: string): number {
+  if (!process.env.hasOwnProperty(envKey)) {
+    throw new Error(`Environment variable "${envKey}" not found!`);
+  }
+  const envValue: string | undefined = process.env[envKey];
+  if (typeof envValue === 'undefined' || envValue === null) {
+    throw new Error(`Environment variable "${envKey}" was not set!`);
+  }
+  const parsed = parseInt(envValue, 10);
+  if (isNaN(parsed)) {
+    throw new Error(`Environment variable "${envKey}" was not a number!`);
+  }
+  return parsed;
 }
 
 (async () => {
@@ -57,34 +93,11 @@ async function run(): Promise<void> {
   console.log('Asking for data...');
   await thermometer.startListening();
 
-  return new Promise<void>((_, reject) => {
-    let dataCount: number;
+  const mqttClient = new MqttClient(mqttOptions);
+  await mqttClient.connect();
 
-    thermometer.temperatures$.pipe(
-      throttleTime(5000),
-    ).subscribe((temps) => {
-      process.stdout.write('X');
-      if (dataCount % 12 === 0) {
-        if (dataCount === 0) {
-          console.log('Started getting data');
-        }
-        process.stdout.write(dataCount % 10000 === 0 ? ',' : '.');
-      }
-      dataCount++;
-
-      // TODO extract to class
-      const [ambient1, ambient2, internal1, internal2, internal3, internal4] = temps;
-
-      ApiClient.updateSensor('bbq_temp_ambient1', 'BBQ Temp Ambient 1', ambient1);
-      ApiClient.updateSensor('bbq_temp_ambient2', 'BBQ Temp Ambient 2', ambient2);
-      ApiClient.updateSensor('bbq_temp_internal1', 'BBQ Temp Internal 1', internal1);
-      ApiClient.updateSensor('bbq_temp_internal2', 'BBQ Temp Internal 2', internal2);
-      ApiClient.updateSensor('bbq_temp_internal3', 'BBQ Temp Internal 3', internal3);
-      ApiClient.updateSensor('bbq_temp_internal4', 'BBQ Temp Internal 4', internal4);
-    }, (e) => {
-      reject(e);
-    });
-  });
+  const poller = new TemperaturePoller(mqttClient, thermometer.temperatures$);
+  return poller.startPolling();
 }
 
 function waitForAdapter(): Promise<Noble> {

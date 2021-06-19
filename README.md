@@ -6,6 +6,7 @@ then posts them to a [Home Assistant](https://www.home-assistant.io) endpoint
 for monitoring and alerting.
 
 ## Installation
+**Prerequisite:** Ensure that the paths in `install/blietooth-temp-monitor.service` are correctly pointing to the install directory.
 ```sh
 # Install dependencies (Linux)
 sudo apt-get install bluetooth bluez libbluetooth-dev libudev-dev
@@ -14,10 +15,10 @@ sudo apt-get install bluetooth bluez libbluetooth-dev libudev-dev
 yarn install && yarn build
 
 # Link the service definition to the system folder
-ln -s install/bluetooth-temp-monitor.service /etc/systemd/system/bluetooth-temp-monitor.service
+sudo ln -s `pwd`/install/bluetooth-temp-monitor.service /etc/systemd/system/bluetooth-temp-monitor.service
 
 # Reload the system list
-sudo sustemctl daemon-reload
+sudo systemctl daemon-reload
 
 # Enable the service
 sudo systemctl start bluetooth-temp-monitor
