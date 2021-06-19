@@ -26,7 +26,7 @@ export class MqttClient {
       payload: JSON.stringify(EMPTY_TEMPERATURES),
       qos: 0,
       retain: true,
-        properties: {
+      properties: {
         willDelayInterval: 10 // seconds
       }
     } });
@@ -44,7 +44,7 @@ export class MqttClient {
         name: `Bluetooth Probe ${probeId}`,
         state_topic: STATE_TOPIC,
         value_template: `{{ value_json.probe_${probeId} }}`,
-      }))
+      }), { retain: true })
     ));
   }
 
@@ -52,6 +52,6 @@ export class MqttClient {
     const state: { [key: string]: number | null } = {};
     temps.forEach((temp, index) => { state[`probe_${index + 1}`] = temp });
 
-    await this.client.publish(STATE_TOPIC, JSON.stringify(state));
+    await this.client.publish(STATE_TOPIC, JSON.stringify(state), { retain: true });
   }
 }
