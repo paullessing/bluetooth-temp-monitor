@@ -1,5 +1,4 @@
 import { Observable } from 'rxjs';
-import { throttleTime } from 'rxjs/operators';
 import { MqttClient } from './mqtt';
 import { Temperatures } from './temperatures.model';
 
@@ -15,13 +14,13 @@ export class TemperaturePoller {
     let dataCount = 0;
     return new Promise((_, reject) => {
       this.temperatures$.pipe(
-        throttleTime(5000),
+        // throttleTime(5000), // MQTT can probably handle frequent updates
       ).subscribe((temps) => {
         if (dataCount === 0) {
           console.log('Data connected');
         }
         dataCount++;
-        if (dataCount % 12 === 0) {
+        if (dataCount % 100 === 0) {
           process.stdout.write(dataCount % 10000 === 0 ? ',' : '.');
         }
 
