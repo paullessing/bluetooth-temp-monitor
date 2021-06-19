@@ -93,7 +93,7 @@ async function run(): Promise<void> {
   console.log('Asking for data...');
   await thermometer.startListening();
 
-  const mqttClient = new MqttClient(mqttOptions);
+  const mqttClient = new MqttClient(mqttOptions, SENSOR_MAC_ADDRESS);
 
   try {
     await mqttClient.connect();

@@ -29,7 +29,7 @@ export function timeout<T>(promise: Promise<T>, timeMs: number, errorType: new (
 
     setTimeout(() => {
       done = true;
-      reject(new errorType(`Timed out after ${(timeMs / 1000).toFixed(1)}ms`));
+      reject(new errorType(`Timed out after ${(timeMs / 1000).toFixed(1)}s`));
     }, timeMs);
   });
 }

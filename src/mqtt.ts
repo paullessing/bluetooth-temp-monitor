@@ -16,19 +16,13 @@ const DISCONNECTED_MESSAGE = {
   payload: JSON.stringify(convertToState(EMPTY_TEMPERATURES)),
 };
 
-function convertToState(temps: Temperatures): { [key: string]: number | null } {
-  const state: { [key: string]: number | null } = {};
-  temps.forEach((temp, index) => { state[`probe_${index + 1}`] = temp });
-
-  return state;
-}
-
 export class MqttClient {
 
   private client!: IMqttClient;
 
   constructor(
-    private readonly options: MqttOptions
+    private readonly options: MqttOptions,
+    private readonly uniqueIdPrefix: string,
   ) {}
 
   public async connect(): Promise<void> {
@@ -50,16 +44,18 @@ export class MqttClient {
   }
 
   public async setupDiscovery(): Promise<void> {
-    await Promise.all([1,2,3,4,5,6].map((probeId) =>
-      this.client.publish(`homeassistant/sensor/bluetoothProbe${probeId}/config`, JSON.stringify({
+    await Promise.all([1,2,3,4,5,6].map((probeId) => {
+      const componentId = generateComponentId(this.uniqueIdPrefix, probeId);
+      return this.client.publish(`homeassistant/sensor/${componentId}/config`, JSON.stringify({
         device_class: 'temperature',
         unit_of_measurement: '°C',
         name: `Bluetooth Probe ${probeId}`,
         force_update: true,
         state_topic: STATE_TOPIC,
         value_template: `{{ value_json.probe_${probeId} }}`,
+        unique_id: componentId,
       }), { retain: true })
-    ));
+    }));
   }
 
   public async publishState(temps: Temperatures): Promise<void> {
@@ -69,4 +65,19 @@ export class MqttClient {
       { retain: true }
     );
   }
+}
+
+function convertToState(temps: Temperatures): { [key: string]: number | null } {
+  const state: { [key: string]: number | null } = {};
+  temps.forEach((temp, index) => { state[`probe_${index + 1}`] = temp });
+
+  return state;
+}
+
+function generateComponentId(prefix: string, probeId: number): string {
+  return `${ensureSafePrefix(prefix)}_probe_${probeId}`;
+}
+
+function ensureSafePrefix(prefix: string): string {
+  return prefix.toLowerCase().replace(/[^a-z0-9]+/gi, '');
 }
