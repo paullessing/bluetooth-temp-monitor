@@ -17,7 +17,7 @@ export const RETRY_DELAY_SECONDS = ensureInt('RETRY_DELAY_SECONDS');
 
 const mqttOptions: MqttOptions = {
   host: ensureString('MQTT_HOST'),
-  port: ensureInt('process.env.MQTT_PORT'),
+  port: ensureInt('MQTT_PORT'),
   username: ensureString('MQTT_USERNAME'),
   password: ensureString('MQTT_PASSWORD'),
 };
@@ -94,6 +94,7 @@ async function run(): Promise<void> {
   await thermometer.startListening();
 
   const mqttClient = new MqttClient(mqttOptions);
+  await mqttClient.connect();
 
   const poller = new TemperaturePoller(mqttClient, thermometer.temperatures$);
   return poller.startPolling();

@@ -20,7 +20,7 @@ export class MqttClient {
 
   public async connect(): Promise<void> {
     const { host, port, username, password } = this.options;
-    this.client = MQTT.connect(`tcp://${host}:${port}`, { username, password });
+    this.client = await MQTT.connectAsync(`tcp://${host}:${port}`, { username, password });
   }
 
   public async setupDiscovery(): Promise<void> {
