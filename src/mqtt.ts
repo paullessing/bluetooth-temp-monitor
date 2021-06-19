@@ -9,6 +9,7 @@ export interface MqttOptions {
 }
 
 const STATE_TOPIC = 'bluetooth_probe/state';
+const EMPTY_TEMPERATURES: Temperatures = [null, null, null, null, null, null];
 
 export class MqttClient {
 
@@ -20,7 +21,15 @@ export class MqttClient {
 
   public async connect(): Promise<void> {
     const { host, port, username, password } = this.options;
-    this.client = await MQTT.connectAsync(`tcp://${host}:${port}`, { username, password });
+    this.client = await MQTT.connectAsync(`tcp://${host}:${port}`, { username, password, will: {
+      topic: STATE_TOPIC,
+      payload: JSON.stringify(EMPTY_TEMPERATURES),
+      qos: 0,
+      retain: true,
+        properties: {
+        willDelayInterval: 10 // seconds
+      }
+    } });
   }
 
   public async setupDiscovery(): Promise<void> {
