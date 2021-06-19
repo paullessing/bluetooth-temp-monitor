@@ -94,10 +94,15 @@ async function run(): Promise<void> {
   await thermometer.startListening();
 
   const mqttClient = new MqttClient(mqttOptions);
-  await mqttClient.connect();
 
-  const poller = new TemperaturePoller(mqttClient, thermometer.temperatures$);
-  return poller.startPolling();
+  try {
+    await mqttClient.connect();
+
+    const poller = new TemperaturePoller(mqttClient, thermometer.temperatures$);
+    await poller.startPolling();
+  } finally {
+    await mqttClient.disconnect();
+  }
 }
 
 function waitForAdapter(): Promise<Noble> {

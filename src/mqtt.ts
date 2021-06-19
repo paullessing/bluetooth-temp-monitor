@@ -32,6 +32,10 @@ export class MqttClient {
     } });
   }
 
+  public async disconnect(): Promise<void> {
+    this.client.end();
+  }
+
   public async setupDiscovery(): Promise<void> {
     await Promise.all([1,2,3,4,5,6].map((probeId) =>
       this.client.publish(`homeassistant/sensor/bluetoothProbe${probeId}/config`, JSON.stringify({
